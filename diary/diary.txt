@@ -1,0 +1,3 @@
+info:monchi:12/15,f,california
+info:siesta:04/01,m,san pedro city,laguna
+info:kisses07:02/06,f,bicol 

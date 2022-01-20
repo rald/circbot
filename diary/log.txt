@@ -1,0 +1,3 @@
+2022/01/13 04:21:33 Micro started
+2022/01/13 04:27:32 diary.c diary.c
+2022/01/13 04:27:32 diary.c diary.c
