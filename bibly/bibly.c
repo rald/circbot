@@ -30,8 +30,8 @@
 
 static char *server  = "sakura.jp.as.dal.net";
 static char *channels = "#pantasya";
-static char *nick = "sieste";
-static char *pass = NULL;
+static char *nick = "siesto";
+static char *pass = "paanoanggagawinko";
 static int  isRegistered = 0;
 
 static BiblyInfo **binfos=NULL;

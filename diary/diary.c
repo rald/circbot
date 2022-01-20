@@ -20,9 +20,9 @@
 
 
 static char *server  = "sakura.jp.as.dal.net";
-static char *channels = "#pantasya";
+static char *channels = "#pantasya,#manila";
 static char *nick = "siesto";
-static char *pass = NULL;
+static char *pass = "paanoanggagawinko";
 static int  isRegistered = 0;
 
 

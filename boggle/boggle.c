@@ -82,7 +82,7 @@ static void onLine(dyad_Event *e);
 
 
 
-int main(void) {
+int main (void) {
 
 	dyad_Stream *stm;
 
@@ -116,7 +116,7 @@ static void sendf(dyad_Stream * s, char *fmt, ...) {
 	va_list args;
 
 	va_start(args, fmt);
-	(void)vprintf(fmt, args);
+	vprintf(fmt, args);
 	va_end(args);
 
 	va_start(args, fmt);
@@ -160,7 +160,7 @@ static char *append(char **a,const char *fmt,...) {
 
 	va_start(args,fmt);
 	b=calloc(lenb+1,sizeof(*b));
-	(void)vsnprintf(b,lenb+1,fmt,args);
+	vsnprintf(b,lenb+1,fmt,args);
 	va_end(args);
 
 	if(*a) {
@@ -248,7 +248,7 @@ static int loadscores(char *path,Player ***players,size_t *nplayers) {
 		AddPlayer(players,nplayers,nick,score);
 	}
 
-	(void)fclose(fh);
+	fclose(fh);
 
 	return 0;
 }
@@ -268,7 +268,7 @@ static int savescores(char *path,Player **players,size_t nplayers) {
 		fprintf(fh,"%s %d\n",players[i]->nick,players[i]->score);
 	}
 
-	(void)fclose(fh);
+	fclose(fh);
 
 	return 0;
 }
@@ -343,15 +343,15 @@ static void onLine(dyad_Event *e) {
 		cmd = skip(usr, ' ');
 		if (cmd[0] == '\0')
 			return;
-		(void)skip(usr, '!');
+		skip(usr, '!');
 	}
-	(void)skip(cmd, '\r');
+	skip(cmd, '\r');
 	par = skip(cmd, ' ');
 	txt = skip(par, ':');
 
-	(void)trim(par);
+	trim(par);
 
-	(void)trim(txt);
+	trim(txt);
 
 	if (strcmp(cmd, "PING")==0) {
 		sendf(e->stream, "PONG :%s\r\n", txt);
@@ -423,7 +423,7 @@ static void onLine(dyad_Event *e) {
 		} else if(strncasecmp(txt,PFX "score",6)==0) {
 			ssize_t k;
 			if(strlen(txt)>7) {
-				k=FindPlayer(players,nplayers,txt+7);
+				k=FindPlayer(players,nplayers,trim(txt+7));
 				if(k!=-1) sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s: %s score is %d.\r\n",chn,usr,players[k]->nick,players[k]->score);
 			} else {
 				k=FindPlayer(players,nplayers,usr);
@@ -433,8 +433,8 @@ static void onLine(dyad_Event *e) {
 			char *msg=NULL;
 			qsort(players,nplayers,sizeof(*players),cmpbyscoredesc);
 			for(i=0; i<(nplayers<10?nplayers:10); i++) {
-				if(i!=0) { (void)append(&msg,", "); }
-				(void)append(&msg,"%d. %s %d",i+1,players[i]->nick,players[i]->score);
+				if(i!=0) append(&msg,", ");
+				append(&msg,"%d. %s %d",i+1,players[i]->nick,players[i]->score);
 			}
 			if(msg) {
 				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " TOP: %s\r\n",chn,msg);
@@ -443,7 +443,7 @@ static void onLine(dyad_Event *e) {
 			}
 		} else {
 			if(gamestate==GAME_STATE_START) {
-				ssize_t k=FindWord(txt);
+				ssize_t k=FindWord(trim(txt));
 				size_t len=0;
 				int points=0;
 
@@ -479,11 +479,9 @@ static void onLine(dyad_Event *e) {
 
 						savescores(SCORE_FILE,players,nplayers);
 
-
 						if(points>0) {
-							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s guessed '%s' plus %d points.\r\n",chn,usr,words[k],points);
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s guessed '%s' plus %d point(s).\r\n",chn,usr,words[k],points);
 						}
-
 
 						if(numguessed>=nwords) {
 
@@ -491,7 +489,6 @@ static void onLine(dyad_Event *e) {
 
 							gamestate=GAME_STATE_INIT;
 						}
-
 
 					} else {
 
