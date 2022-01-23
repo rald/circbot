@@ -1,0 +1,7 @@
+2022/01/23 08:37:39 Micro started
+2022/01/23 08:38:56 main.c main.c
+2022/01/23 08:38:56 main.c main.c
+2022/01/23 08:38:56 main.c main.c
+2022/01/23 08:39:01 main.c main.c
+2022/01/23 08:39:01 main.c main.c
+2022/01/23 08:39:01 main.c main.c
