@@ -12,13 +12,15 @@
 #include "dyad.h"
 
 
+
 #define GAME_TITLE "WINKWONK"
+
 #define PFX "."
 
 
 
 static int prt = 6667;
-static char *srv = "sakura.jp.as.dal.net";
+static char *srv = "::1";
 static char *chn = "#pantasya";
 static char *nck = "siesti";
 static char *pss = NULL;
@@ -48,9 +50,15 @@ GameState gamestate=GAME_STATE_INIT;
 typedef enum PlayerRole PlayerRole;
 
 enum PlayerRole {
-	PLAYER_ROLE_BULLY=0,
+	PLAYER_ROLE_NONE=0,
+	PLAYER_ROLE_BULLY,
+	PLAYER_ROLE_DUMB,
+	PLAYER_ROLE_LIAR,
+	PLAYER_ROLE_SUCKER,
+	PLAYER_ROLE_TRANSFEREE,
 	PLAYER_ROLE_STUDENT,
 	PLAYER_ROLE_COUNCILOR,
+	PLAYER_ROLE_PRESIDENT,
 	PLAYER_ROLE_PRINCIPAL,
 	PLAYER_ROLE_MAX
 };
@@ -64,21 +72,26 @@ struct Player {
 	int score;
 	PlayerRole role;
 	bool bullied;
+	bool lie;
 };
 
 static Player **players=NULL;
 static size_t nplayers=0;
 
+static PlayerRole *roles=NULL;
+static size_t nroles=0;;
+
+static size_t numbullied=0;
 
 
 static void sendf(dyad_Stream * s, char *fmt, ...);
 static char *trim(char *a);
 static char *skip(char *s, char c);
 
-static Player *CreatePlayer(char *nick,int score);
+static Player *CreatePlayer(char *nick,int score,PlayerRole role);
 static void DestroyPlayer(Player **player);
 static void DestroyPlayers(Player ***players,size_t *nplayers);
-static void AddPlayer(Player ***players,size_t *nplayers,char *nick,int score);
+static void AddPlayer(Player ***players,size_t *nplayers,char *nick,int score,PlayerRole role);
 static ssize_t FindPlayer(Player **players,size_t nplayers,char *nick);
 
 static void onConnect(dyad_Event *e);
@@ -175,10 +188,16 @@ static char *skip(char *s, char c) {
 static char *PlayerRoleToString(PlayerRole role) {
 	char *result=NULL;
 	switch(role) {
-		case PLAYER_ROLE_BULLY:		result="Bully";		break;
-		case PLAYER_ROLE_STUDENT:	result="Student";	break;
-		case PLAYER_ROLE_COUNCILOR:	result="Councilor";	break;
-		case PLAYER_ROLE_PRINCIPAL:	result="Principal";	break;
+		case PLAYER_ROLE_NONE:			result="none";			break;
+		case PLAYER_ROLE_BULLY:			result="bully";			break;
+		case PLAYER_ROLE_DUMB:			result="dumb";			break;
+		case PLAYER_ROLE_LIAR:			result="liar";			break;
+		case PLAYER_ROLE_SUCKER:		result="sucker";		break;
+		case PLAYER_ROLE_TRANSFEREE:	result="transferee";	break;
+		case PLAYER_ROLE_STUDENT:		result="student";		break;
+		case PLAYER_ROLE_COUNCILOR:		result="councilor";		break;
+		case PLAYER_ROLE_PRESIDENT:		result="president";		break;
+		case PLAYER_ROLE_PRINCIPAL:		result="principal";		break;
 		default: break;
 	}
 	return result;
@@ -186,11 +205,12 @@ static char *PlayerRoleToString(PlayerRole role) {
 
 
 
-static Player *CreatePlayer(char *nick,int score) {
+static Player *CreatePlayer(char *nick,int score,PlayerRole role) {
 	Player *player=malloc(sizeof(*player));
 	if(player) {
 		player->nick=strdup(nick);
 		player->score=score;
+		player->role=role;
 	}
 	return player;
 }
@@ -219,9 +239,9 @@ static void DestroyPlayers(Player ***players,size_t *nplayers) {
 
 
 
-static void AddPlayer(Player ***players,size_t *nplayers,char *nick,int score) {
+static void AddPlayer(Player ***players,size_t *nplayers,char *nick,int score,PlayerRole role) {
 	(*players)=realloc(*players,sizeof(*players)*((*nplayers)+1));
-	(*players)[(*nplayers)++]=CreatePlayer(nick,score);
+	(*players)[(*nplayers)++]=CreatePlayer(nick,score,role);
 }
 
 
@@ -311,7 +331,7 @@ static void onLine(dyad_Event *e) {
 			if(gamestate==GAME_STATE_INIT) {
 				ssize_t k=FindPlayer(players,nplayers,usr);
 				if(k==-1) {
-					AddPlayer(&players,&nplayers,usr,0);
+					AddPlayer(&players,&nplayers,usr,0,PLAYER_ROLE_NONE);
 					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, joined the game.",chn,usr);
 				} else {
 					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are already joined.",chn,usr);
@@ -319,24 +339,39 @@ static void onLine(dyad_Event *e) {
 			} else if(gamestate==GAME_STATE_START) {
 				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot join the game is already running.",chn,usr);
 			}
+		} else if(strcasecmp(txt,PFX "players")==0) {
+			sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, %zu players joined.",chn,usr,nplayers);
 		} else if(strcasecmp(txt,PFX "start")==0) {
 			if(gamestate==GAME_STATE_INIT) {
-				if(nplayers<4) {
-					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, there are only %zu player(s) joined must be 4 and up.",chn,usr,nplayers);
+				if(nplayers<5) {
+					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, there are only %zu player(s) joined must be 5 and up.",chn,usr,nplayers);
 				} else {
 
 					size_t i,j;
 
-					size_t nroles=nplayers;
-					PlayerRole *roles=malloc(sizeof(*roles)*nroles);
+					if(roles!=NULL) {
+						free(roles);
+						roles=NULL;
+					}
+
+					nroles=nplayers;
+					roles=malloc(sizeof(*roles)*nroles);
 					PlayerRole role;
 
 					roles[0]=PLAYER_ROLE_BULLY;
 					roles[1]=PLAYER_ROLE_COUNCILOR;
-					roles[2]=PLAYER_ROLE_PRINCIPAL;
+					roles[2]=PLAYER_ROLE_PRESIDENT;
+					roles[3]=PLAYER_ROLE_PRINCIPAL;
 
-					for(i=3;i<nroles;i++) {
-						roles[i]=PLAYER_ROLE_STUDENT;
+					for(i=4;i<nroles;i++) {
+						switch(rand()%5) {
+							case 0: roles[i]=PLAYER_ROLE_DUMB; break;
+							case 1: roles[i]=PLAYER_ROLE_LIAR; break;
+							case 2: roles[i]=PLAYER_ROLE_SUCKER; break;
+							case 3: roles[i]=PLAYER_ROLE_TRANSFEREE; break;
+							case 4: roles[i]=PLAYER_ROLE_STUDENT; break;
+							default: break;
+						}
 					}
 
 					for(i=nroles-1;i>0;i--) {
@@ -347,17 +382,18 @@ static void onLine(dyad_Event *e) {
 					}
 
 					for(i=0;i<nplayers;i++) {
-						players[i]->role=roles[i];
+						players[i]->role=roles[i]==PLAYER_ROLE_TRANSFEREE?(players[i]->role==PLAYER_ROLE_NONE?PLAYER_ROLE_STUDENT:players[i]->role):roles[i];
 						players[i]->bullied=false;
+						players[i]->lie=false;
+					}
+
+					for(i=0;i<nplayers;i++) {
+						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your role is '%s'.",players[i]->nick,players[i]->nick,PlayerRoleToString(players[i]->role));
 					}
 
 					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game is started...",chn);
 
-					for(i=0;i<nplayers;i++) {
-						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you role is '%s'.",players[i]->nick,players[i]->nick,PlayerRoleToString(players[i]->role));
-					}
-
-
+					numbullied=0;
 					ticks=0;
 					gamestate=GAME_STATE_START;
 				}
@@ -368,21 +404,55 @@ static void onLine(dyad_Event *e) {
 			if(gamestate==GAME_STATE_START) {
 				ssize_t k=FindPlayer(players,nplayers,usr);
 				if(k!=-1) {
-					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your role is %s.",usr,usr,PlayerRoleToString(players[k]->role));
+					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your role is '%s'.",usr,usr,PlayerRoleToString(players[k]->role));
 				} else {
 					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are not joined.",chn,usr);
 				}
 			} else {
 				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, game is not started.",chn,usr);
 			}
-		} else if(strcasecmp(txt,PFX "status")==0) {
+		} else if(strncasecmp(txt,PFX "status",7)==0) {
 
-			ssize_t k=FindPlayer(players,nplayers,usr);
+			char *ins=NULL,*tgt=NULL;
 
-			if(k!=-1) {
-				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your status is '%s'.",usr,usr,players[k]->bullied?"Bullied":"Normal");
+			if(gamestate==GAME_STATE_START) {
+
+				ins=txt;
+				tgt=skip(txt,' ');
+
+				if(tgt!=NULL && *tgt!='\0') {
+
+					ssize_t k=FindPlayer(players,nplayers,tgt);
+
+					if(k!=-1) {
+						if(players[k]->role==PLAYER_ROLE_LIAR) {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, '%s' status is '%s'.",usr,usr,players[k]->nick,players[k]->lie?"bullied":"normal");
+						} else {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, '%s' status is '%s'.",usr,usr,players[k]->nick,players[k]->bullied?"bullied":"normal");
+						}
+					} else {
+						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, '%s' is not joined.",chn,usr);
+					}
+
+				} else {
+
+					ssize_t k=FindPlayer(players,nplayers,usr);
+
+					if(k!=-1) {
+						if(players[k]->role==PLAYER_ROLE_LIAR) {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,players[k]->bullied?"bullied":"normal",players[k]->lie?"bullied":"normal");
+						} else {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your status is '%s'.",usr,usr,players[k]->bullied?"bullied":"normal");
+						}
+					} else {
+						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are not joined.",chn,usr);
+					}
+
+				}
+
 			} else {
-				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are not joined.",usr,usr);
+				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, game is not started.",chn,usr);
+
 			}
 
 		} else if(strncasecmp(txt,PFX "hit", 4)==0) {
@@ -393,34 +463,87 @@ static void onLine(dyad_Event *e) {
 			if(gamestate==GAME_STATE_START) {
 
 				ins=txt;
-				tgt=skip(txt,' ');
-				trim(tgt);
+				tgt=trim(skip(txt,' '));
 
 				k1=FindPlayer(players,nplayers,usr);
 
 				if(k1!=-1) {
-					k2=FindPlayer(players,nplayers,tgt);
 
-					if(k1==k2) {
-						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot hit yourself.",usr,usr);
-					} else if(k2!=-1) {
-						switch(players[k1]->role) {
-							case PLAYER_ROLE_BULLY:
-								players[k2]->bullied=true;
-							break;
-							case PLAYER_ROLE_STUDENT:
+					 if(players[k1]->role==PLAYER_ROLE_DUMB || players[k1]->role==PLAYER_ROLE_STUDENT) {
+						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit.",usr,usr);
+					} else if(players[k1]->bullied) {
+						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit because you are bullied.",usr,usr);
+					} else if(players[k1]->role==PLAYER_ROLE_LIAR) {
+						if(tgt==NULL || *tgt=='\0') {
+							players[k1]->lie=!players[k1]->lie;
 
-							break;
-							case PLAYER_ROLE_COUNCILOR:
-								players[k2]->bullied=false;
-							break;
-							case PLAYER_ROLE_PRINCIPAL:
-
-							break;
-							default: break;
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,players[k1]->bullied?"bullied":"normal");
+						} else {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit a target.",usr,usr);
 						}
 					} else {
-						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot find player '%s'.",usr,usr,tgt);
+
+						k2=FindPlayer(players,nplayers,tgt);
+
+						if(k1==k2) {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot hit yourself.",usr,usr);
+						} else if(k2!=-1) {
+							switch(players[k1]->role) {
+								case PLAYER_ROLE_BULLY:
+
+									if(!players[k2]->bullied) {
+
+										if(players[k2]->role==PLAYER_ROLE_PRESIDENT) {
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, the bully hits president '%s' and loses.",chn,usr,players[k2]->nick);
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
+											gamestate=GAME_STATE_INIT;
+
+										} else if(players[k2]->role!=PLAYER_ROLE_DUMB) {
+											numbullied++;
+
+											players[k2]->bullied=true;
+
+										}
+
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, is bullied.",chn,players[k2]->nick);
+
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you bullied '%s'.",usr,usr,players[k2]->nick);
+
+										if(numbullied>=nplayers/3) {
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, the bully wins.",chn,usr);
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
+											gamestate=GAME_STATE_INIT;
+										}
+
+									} else {
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, '%s' is already bullied.",usr,usr,players[k2]->nick);
+									}
+
+								break;
+								case PLAYER_ROLE_SUCKER:
+									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Gossip: '%s' is a bully.",chn,players[k2]->nick);
+								break;
+								case PLAYER_ROLE_COUNCILOR:
+									players[k2]->bullied=false;
+									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are being healed.",players[k2]->nick,players[k2]->nick);
+									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you heal '%s'.",usr,usr,players[k2]->nick);
+								break;
+								case PLAYER_ROLE_PRESIDENT:
+									if(players[k2]->role==PLAYER_ROLE_BULLY) {
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you catched the bully '%s'.",chn,usr,players[k2]->nick);
+									} else {
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you catched '%s' is not the bully.",chn,usr,players[k2]->nick);
+									}
+
+									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
+
+									gamestate=GAME_STATE_INIT;
+								break;
+								default: break;
+							}
+						} else {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot find player '%s'.",usr,usr,tgt);
+						}
 					}
 				} else {
 					sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are not joined.",chn,usr);

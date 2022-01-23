@@ -18,7 +18,7 @@
 
 
 static int prt = 6667;
-static char *srv = "sakura.jp.as.dal.net";
+static char *srv = "::1";
 static char *chn = "#pantasya";
 static char nck[32];
 static char *pss = NULL;
@@ -189,7 +189,7 @@ static void onLine(dyad_Event *e) {
 	trim(txt);
 
 	if (strcmp(cmd, "PING")==0) {
-		sendf(e->stream, "PONG %s\r\n", txt);
+		sendf(e->stream, "PONG %s", txt);
 	} else if (strcmp(cmd, "001")==0) {
 		printf("Connected.\n");
 		sendf(e->stream, "JOIN %s", chn);
@@ -201,7 +201,7 @@ static void onLine(dyad_Event *e) {
 		printf("<%s> %s\n", usr, txt);
 
 		ins=txt;
-		prm=skip(txt,' ');
+		prm=skip(ins,' ');
 
 		if(strcasecmp(ins,PFX "raw")==0) {
 			char *bot=NULL,*raw=NULL;
@@ -209,6 +209,12 @@ static void onLine(dyad_Event *e) {
 			raw=skip(prm,' ');
 			if(strcasecmp(bot,nck)==0) {
 				sendf(e->stream,"%s",raw);
+			}
+		} else if(strncasecmp(ins,PFX "joinall",8)==0) {
+			if(prm!=NULL && *prm!='\0') {
+				sendf(e->stream,"PRIVMSG %s :.join",prm);
+			} else {
+				sendf(e->stream,"PRIVMSG %s :.join",chn);
 			}
 		}
 
