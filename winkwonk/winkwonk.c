@@ -327,7 +327,19 @@ static void onLine(dyad_Event *e) {
 
 		printf("<%s> %s\n", usr, txt);
 
-		if(strcasecmp(txt,PFX "join")==0) {
+		if(strncasecmp(txt,PFX "quit",5)==0) {
+			char *ins=NULL,*prm=NULL;
+
+			ins=txt;
+			prm=skip(ins,' ');
+
+			if(prm!=NULL && *prm!='\0') {
+				sendf(e->stream,"QUIT :%s",prm);
+			} else {
+				sendf(e->stream,"QUIT");
+			}
+
+		} else if(strcasecmp(txt,PFX "join")==0) {
 			if(gamestate==GAME_STATE_INIT) {
 				ssize_t k=FindPlayer(players,nplayers,usr);
 				if(k==-1) {
@@ -440,7 +452,7 @@ static void onLine(dyad_Event *e) {
 
 					if(k!=-1) {
 						if(players[k]->role==PLAYER_ROLE_LIAR) {
-							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,players[k]->bullied?"bullied":"normal",players[k]->lie?"bullied":"normal");
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,(players[k]->bullied?"bullied":"normal"),(players[k]->lie?"bullied":"normal"));
 						} else {
 							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your status is '%s'.",usr,usr,players[k]->bullied?"bullied":"normal");
 						}
@@ -469,15 +481,14 @@ static void onLine(dyad_Event *e) {
 
 				if(k1!=-1) {
 
-					 if(players[k1]->role==PLAYER_ROLE_DUMB || players[k1]->role==PLAYER_ROLE_STUDENT) {
+					if(players[k1]->role==PLAYER_ROLE_DUMB || players[k1]->role==PLAYER_ROLE_STUDENT) {
 						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit.",usr,usr);
 					} else if(players[k1]->bullied) {
 						sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit because you are bullied.",usr,usr);
 					} else if(players[k1]->role==PLAYER_ROLE_LIAR) {
 						if(tgt==NULL || *tgt=='\0') {
 							players[k1]->lie=!players[k1]->lie;
-
-							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,players[k1]->bullied?"bullied":"normal");
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, your real status is '%s' what they see is '%s'.",usr,usr,players[k1]->bullied?"bullied":"normal",players[k1]->lie?"bullied":"normal");
 						} else {
 							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you cannot hit a target.",usr,usr);
 						}
@@ -485,10 +496,15 @@ static void onLine(dyad_Event *e) {
 
 						k2=FindPlayer(players,nplayers,tgt);
 
-						if(k1==k2) {
+						if(k2==-1) {
+							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot find player '%s'.",usr,usr,tgt);
+						} else if(players[k1]->role==PLAYER_ROLE_SUCKER) {								sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Gossip: '%s' is a bully.",chn,players[k2]->nick);
+						} else if(k1==k2) {
 							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot hit yourself.",usr,usr);
-						} else if(k2!=-1) {
+						} else {
+
 							switch(players[k1]->role) {
+
 								case PLAYER_ROLE_BULLY:
 
 									if(!players[k2]->bullied) {
@@ -503,16 +519,23 @@ static void onLine(dyad_Event *e) {
 
 											players[k2]->bullied=true;
 
-										}
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are bullied.",players[k2]->nick,players[k2]->nick);
 
-										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, is bullied.",chn,players[k2]->nick);
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you bullied '%s'.",usr,usr,players[k2]->nick);
 
-										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you bullied '%s'.",usr,usr,players[k2]->nick);
+											if(numbullied>=nplayers/3) {
+												sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, the bully wins.",chn,usr);
+												sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
+												gamestate=GAME_STATE_INIT;
+											}
 
-										if(numbullied>=nplayers/3) {
-											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, the bully wins.",chn,usr);
-											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
-											gamestate=GAME_STATE_INIT;
+										} else if(players[k2]->role!=PLAYER_ROLE_DUMB) {
+
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are bullied.",players[k2]->nick,players[k2]->nick);
+
+											sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you bullied '%s'.",usr,usr,players[k2]->nick);
+
+
 										}
 
 									} else {
@@ -520,29 +543,29 @@ static void onLine(dyad_Event *e) {
 									}
 
 								break;
-								case PLAYER_ROLE_SUCKER:
-									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Gossip: '%s' is a bully.",chn,players[k2]->nick);
-								break;
 								case PLAYER_ROLE_COUNCILOR:
-									players[k2]->bullied=false;
-									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are being healed.",players[k2]->nick,players[k2]->nick);
-									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you heal '%s'.",usr,usr,players[k2]->nick);
+									if(players[k2]->bullied) {
+										players[k2]->bullied=false;
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you are healed.",players[k2]->nick,players[k2]->nick);
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you heal '%s'.",usr,usr,players[k2]->nick);
+									} else {
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, '%s' is not bullied.",usr,usr,players[k2]->nick);
+									}
 								break;
 								case PLAYER_ROLE_PRESIDENT:
 									if(players[k2]->role==PLAYER_ROLE_BULLY) {
 										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you catched the bully '%s'.",chn,usr,players[k2]->nick);
 									} else {
-										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you catched '%s' is not the bully.",chn,usr,players[k2]->nick);
+										sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, you mistaken '%s' for a bully.",chn,usr,players[k2]->nick);
 									}
 
 									sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Game Over.",chn);
 
 									gamestate=GAME_STATE_INIT;
+
 								break;
 								default: break;
 							}
-						} else {
-							sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s, cannot find player '%s'.",usr,usr,tgt);
 						}
 					}
 				} else {
@@ -553,6 +576,7 @@ static void onLine(dyad_Event *e) {
 			}
 		}
 	}
+
 
 	free(tmp);
 	tmp=NULL;
