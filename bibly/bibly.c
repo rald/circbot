@@ -105,7 +105,7 @@ static void send(dyad_Stream *stream,char *dest,char *fmt, ...) {
 
 
 static void onConnect(dyad_Event *e) {
-    dyad_writef(e->stream, "PASS %s\r\n", pass);
+    if(pass!=NULL) dyad_writef(e->stream, "PASS %s\r\n", pass);
     dyad_writef(e->stream, "NICK %s\r\n", nick);
     dyad_writef(e->stream, "USER %s %s %s :%s\r\n", nick, nick, nick, nick);
 }
