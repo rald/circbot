@@ -22,7 +22,7 @@
 static int prt = 6667;
 static char *srv = "::1";
 static char *chn = "#pantasya";
-static char *nck = "siesti";
+static char *nck = "siestu";
 static char *pss = NULL;
 
 

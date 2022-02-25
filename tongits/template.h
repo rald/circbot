@@ -1,0 +1,15 @@
+#ifndef TEMPLATE_H
+#define TEMPLATE_H
+
+
+
+#ifdef TEMPLATE_IMPLEMENTATION
+
+
+
+#endif /* TEMPLATE_IMPLEMENTATION */
+
+
+
+
+#endif /* TEMPLATE_H */

@@ -111,11 +111,11 @@ void getanagrams(char ***anagrams,size_t *nanagrams,char **words,size_t nwords,c
 
 
 int cmpbylengthdesc(const void *a,const void *b) {
-	size_t l=strlen((char*)a);
-	size_t r=strlen((char*)b);
+	size_t l=strlen(*(char**)a);
+	size_t r=strlen(*(char**)b);
 	if(l<r) return 1;
 	else if(l>r) return -1;
-	return 0;
+	return strcmp(*(char**)a,*(char**)b);
 }
 
 
@@ -136,19 +136,24 @@ int main(void) {
 		getanagrams(&anagrams,&nanagrams,w1,nw1,w2[i]);
 		if(nanagrams>=10 && nanagrams<=30) {
 
-			printf("%s\n",w2[i]);		
+			printf("%s\n",w2[i]);
+
+/*		
 			fprintf(fh,"%s\n",w2[i]);
 
 			fflush(fh);
+*/
 
-/*
+//*
 			qsort(anagrams,nanagrams,sizeof(*anagrams),cmpbylengthdesc);
 			for(j=0;j<nanagrams;j++) {
-				if(j!=0) printf(",");
-				printf("%s",anagrams[j]);
+				if(j!=0) fprintf(fh,",");
+				fprintf(fh,"%s",anagrams[j]);
 			}
-			printf("\n");
-*/
+			fprintf(fh,"\n");
+			fflush(fh);
+
+//*/
 		}
 
 		for(j=0;j<nanagrams;j++) {

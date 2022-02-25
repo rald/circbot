@@ -30,7 +30,7 @@
 
 static char *server  = "sakura.jp.as.dal.net";
 static char *channels = "#pantasya";
-static char *nick = "siesto";
+static char *nick = "siesty";
 static char *pass = NULL;
 static int  isRegistered = 0;
 
@@ -105,7 +105,7 @@ static void send(dyad_Stream *stream,char *dest,char *fmt, ...) {
 
 
 static void onConnect(dyad_Event *e) {
-    if(pass!=NULL) dyad_writef(e->stream, "PASS %s\r\n", pass);
+    dyad_writef(e->stream, "PASS %s\r\n", pass);
     dyad_writef(e->stream, "NICK %s\r\n", nick);
     dyad_writef(e->stream, "USER %s %s %s :%s\r\n", nick, nick, nick, nick);
 }

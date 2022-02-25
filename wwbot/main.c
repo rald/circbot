@@ -18,7 +18,7 @@
 
 
 static int prt = 6667;
-static char *srv = "::1";
+static char *srv = "srv24711.blue.kundencontroller.de";
 static char *chn = "#pantasya";
 static char nck[32];
 static char *pss = NULL;
@@ -189,7 +189,7 @@ static void onLine(dyad_Event *e) {
 	trim(txt);
 
 	if (strcmp(cmd, "PING")==0) {
-		sendf(e->stream, "PONG %s", txt);
+		sendf(e->stream, "PONG :%s", txt);
 	} else if (strcmp(cmd, "001")==0) {
 		printf("Connected.\n");
 		sendf(e->stream, "JOIN %s", chn);
@@ -210,14 +210,23 @@ static void onLine(dyad_Event *e) {
 			if(strcasecmp(bot,nck)==0) {
 				sendf(e->stream,"%s",raw);
 			}
-		} else if(strncasecmp(ins,PFX "joinall",8)==0) {
+		} else if(strcasecmp(ins,PFX "joinall")==0) {
 			if(prm!=NULL && *prm!='\0') {
-				sendf(e->stream,"PRIVMSG %s :.join",prm);
+				sendf(e->stream,"PRIVMSG %s :.join %s",chn,prm);
 			} else {
 				sendf(e->stream,"PRIVMSG %s :.join",chn);
 			}
+		} else if(strcasecmp(ins,PFX "msg")==0) {
+			char *bot=NULL,*tgt=NULL,*msg=NULL;
+			bot=prm;
+			tgt=skip(bot,' ');
+			msg=skip(tgt,' ');
+			if(		strcasecmp(bot,nck)==0 &&
+					tgt!=NULL && *tgt!='\0' && 
+					msg!=NULL && *msg!='\0') {
+				sendf(e->stream,"PRIVMSG %s :%s",tgt,msg);
+			}
 		}
-
 	}
 
 	free(tmp);
