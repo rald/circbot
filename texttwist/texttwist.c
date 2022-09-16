@@ -441,7 +441,15 @@ static void onLine(dyad_Event *e) {
 				gamestate=GAME_STATE_START;
 
 			}
-		} else if(strcasecmp(txt,PFX "text")==0) {
+		} else if(strcasecmp(txt,PFX "words")==0) {
+			if(gamestate==GAME_STATE_START) {
+				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " there are %d words. left unguesed  are %d words\r\n",chn,nanagrams,nanagrams-numguessed);
+			}
+		} else if(strcasecmp(txt,PFX "time")==0) {
+			if(gamestate==GAME_STATE_START) {
+				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " time left is %d seconds\r\n",chn,allotedtime-ticks);
+			}
+	} else if(strcasecmp(txt,PFX "text")==0) {
 			if(gamestate==GAME_STATE_START) {
 				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s\r\n",chn,shufword);
 			}

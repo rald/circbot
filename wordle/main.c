@@ -32,7 +32,7 @@ static char *pss = NULL;
 #define STRING_MAX 256
 
 #define RANDLIST_FILE "randlist.txt"
-
+#define WORDLIST_FILE "wordlist.txt"
 
 Config **configs=NULL;
 size_t nconfigs=0;
@@ -186,7 +186,7 @@ static void onTick(dyad_Event *e) {
 	
 		remainingtime=allottedtime-elapsedtime;
 	
-		if(remainingtime<0) remainingtime=0;
+		if(remainingtime<=0) remainingtime=0;
 	
 		if(remainingtime==0) {
 			sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " Time Up.",chn);
@@ -341,7 +341,7 @@ int check(char msg[],char *w1,char *w2) {
 		return 1;
 	} else if(lenw1!=lenw2) {
 		sprintf(msg,"The word must be %d letters.",lenw1);
-	} else if(!find(RANDLIST_FILE,s2)) {
+	} else if(!find(WORDLIST_FILE,s2)) {
 		sprintf(msg,"The word \"%s\" is not in the dictionary.",w2);
 	} else {
 		for(i=0;i<lenw1;i++) {

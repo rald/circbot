@@ -28,10 +28,10 @@
 
 
 
-static char *server  = "sakura.jp.as.dal.net";
+static char *server  = "irc.dal.net";
 static char *channels = "#pantasya";
-static char *nick = "siesty";
-static char *pass = NULL;
+static char *nick = "siesto";
+static char *pass = "paanoanggagawinko";
 static int  isRegistered = 0;
 
 static BiblyInfo **binfos=NULL;
@@ -105,7 +105,7 @@ static void send(dyad_Stream *stream,char *dest,char *fmt, ...) {
 
 
 static void onConnect(dyad_Event *e) {
-    dyad_writef(e->stream, "PASS %s\r\n", pass);
+    if(pass) dyad_writef(e->stream, "PASS %s\r\n", pass);
     dyad_writef(e->stream, "NICK %s\r\n", nick);
     dyad_writef(e->stream, "USER %s %s %s :%s\r\n", nick, nick, nick, nick);
 }

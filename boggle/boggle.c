@@ -22,8 +22,8 @@
 
 static int prt = 6667;
 static char *srv = "sakura.jp.as.dal.net";
-static char *chn = "#philippines";
-static char *nck = "siesto";
+static char *chn = "#pantasya";
+static char *nck = "sieste";
 static char *pss = "paanoanggagawinko";
 
 static size_t allottedtime=180;
