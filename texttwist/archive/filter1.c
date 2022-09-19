@@ -138,13 +138,15 @@ int main(void) {
 
 			printf("%s\n",w2[i]);
 
-/*		
+//*		
 			fprintf(fh,"%s\n",w2[i]);
 
 			fflush(fh);
-*/
+//*/
 
-//*
+/*
+
+
 			qsort(anagrams,nanagrams,sizeof(*anagrams),cmpbylengthdesc);
 			for(j=0;j<nanagrams;j++) {
 				if(j!=0) fprintf(fh,",");
@@ -154,6 +156,7 @@ int main(void) {
 			fflush(fh);
 
 //*/
+
 		}
 
 		for(j=0;j<nanagrams;j++) {

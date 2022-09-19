@@ -9,3 +9,4 @@ bible:saved:romans 10:13
 bible:weak:matthew 26:41
 bible:worries:matthew 6:34
 bible:angry:romans 12:19
+bible:serve two masters:Matthew 6:24

@@ -1,0 +1,49 @@
+#include <curl/curl.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define FILE_SIZE 10000
+
+int main(void)
+{
+curl_global_init(CURL_GLOBAL_ALL);
+
+CURL * myHandle;
+CURLcode setop_result;
+FILE *file;
+
+if((file = fopen("webpage.html", "wb")) == NULL)
+{
+    perror("Error");
+    exit(EXIT_FAILURE);
+}
+
+if((myHandle = curl_easy_init()) == NULL)
+{
+    perror("Error");
+    exit(EXIT_FAILURE);
+}
+
+if((setop_result = curl_easy_setopt(myHandle, CURLOPT_URL, "http://cboard.cprogramming.com/")) != CURLE_OK)
+{
+    perror("Error");
+    exit(EXIT_FAILURE);
+}
+
+    if((setop_result = curl_easy_setopt(myHandle, CURLOPT_WRITEDATA, file))     != CURLE_OK)
+{
+    perror("Error");
+    exit(EXIT_FAILURE);
+}
+
+if((setop_result = curl_easy_perform(myHandle)) != 0)
+{
+    perror("Error");
+    exit(EXIT_FAILURE);
+}
+curl_easy_cleanup(myHandle);
+fclose(file);
+puts("Webpage downloaded successfully to webpage.html");
+
+return 0;
+}

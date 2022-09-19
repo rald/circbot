@@ -1,0 +1,4 @@
+#!/bin/sh
+name=$(basename "$1")
+sed -n '2,$p' "$name" | gcc -o "$name".exe -x c++ - && shift && ./"$name".exe "$@"
+

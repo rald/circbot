@@ -21,388 +21,404 @@
 #define LEXER_IMPLEMENTATION
 #include "lexer.h"
 
-#define BIBLE_PATH "kjv.csv"
-#define BIBLE_INFO "kjv.inf"
+#define BIBLE_PATH "cpdv.csv"
+#define BIBLE_INFO "cpdv.inf"
 #define ID_FILE "id.txt"
 #define DIARY_FILE "diary.txt"
 
 
 
-static char *server  = "irc.dal.net";
-static char *channels = "#pantasya";
-static char *nick = "siesto";
-static char *pass = "paanoanggagawinko";
-static int  isRegistered = 0;
+static char    *server = "irc.dal.net";
+static char    *channels = "#pantasya";
+static char    *nick = "siesto";
+static char    *pass = "paanoanggagawinko";
+static int 	isRegistered = 0;
 
-static BiblyInfo **binfos=NULL;
-static size_t nbinfos=0;
+static BiblyInfo **binfos = NULL;
+static size_t 	nbinfos = 0;
 
-static void send(dyad_Stream *stream,char *dest,char *fmt, ...);
-static void onConnect(dyad_Event *e);
-static void onError(dyad_Event *e);
-static void onLine(dyad_Event *e);
+static void 	send(dyad_Stream * stream, char *dest, char *fmt,...);
+static void 	onConnect(dyad_Event * e);
+static void 	onError(dyad_Event * e);
+static void 	onLine(dyad_Event * e);
 
 
 
-int main(void) {
-    dyad_Stream *s;
-    dyad_init();
+int
+main(void)
+{
+	dyad_Stream    *s;
+	dyad_init();
 
-    s = dyad_newStream();
-    dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
-    dyad_addListener(s, DYAD_EVENT_ERROR,   onError,   NULL);
-    dyad_addListener(s, DYAD_EVENT_LINE,    onLine,    NULL);
-    dyad_connect(s, server, 6667);
+	s = dyad_newStream();
+	dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
+	dyad_addListener(s, DYAD_EVENT_ERROR, onError, NULL);
+	dyad_addListener(s, DYAD_EVENT_LINE, onLine, NULL);
+	dyad_connect(s, server, 6667);
 
-    while (dyad_getStreamCount() > 0) {
-        dyad_update();
-    }
+	while (dyad_getStreamCount() > 0) {
+		dyad_update();
+	}
 
-    dyad_shutdown();
-    return 0;
+	dyad_shutdown();
+	return 0;
 }
 
 
 
-static void send(dyad_Stream *stream,char *dest,char *fmt, ...) {
-    int len=0;
-    char *buf1=NULL;
-    char buf2[256];
-    size_t i=0,j=0;
+static void
+send(dyad_Stream * stream, char *dest, char *fmt,...)
+{
+	int 		len = 0;
+	char           *buf1 = NULL;
+	char 		buf2     [256];
+	size_t 		i = 0, j = 0;
 
 
-    va_list args;
+	va_list 	args;
 
-    va_start(args,fmt);
-    len=vsnprintf(NULL,0,fmt,args);
-    va_end(args);
+	va_start(args, fmt);
+	len = vsnprintf(NULL, 0, fmt, args);
+	va_end(args);
 
-    va_start(args,fmt);
-    buf1=calloc(len+1,sizeof(*buf1));
-    vsprintf(buf1,fmt,args);
-    va_end(args);
+	va_start(args, fmt);
+	buf1 = calloc(len + 1, sizeof(*buf1));
+	vsprintf(buf1, fmt, args);
+	va_end(args);
 
-    buf2[0]='\0';
-    while(buf1[i]) {
-        buf2[j++]=buf1[i++];
-        buf2[j]='\0';
-        if(j>=255) {
-//            sleep(60);
-            dyad_writef(stream, "PRIVMSG %s :%s\r\n",dest,buf2);
-            buf2[0]='\0';
-            j=0;
-        }
-    }
-    if(j>0) {
- //       sleep(60);
-        dyad_writef(stream, "PRIVMSG %s :%s\r\n",dest,buf2);
-        buf2[0]='\0';
-        j=0;
-    }
-
+	buf2[0] = '\0';
+	while (buf1[i]) {
+		buf2[j++] = buf1[i++];
+		buf2[j] = '\0';
+		if (j >= 255) {
+			//sleep(60);
+			dyad_writef(stream, "PRIVMSG %s :%s\r\n", dest, buf2);
+			buf2[0] = '\0';
+			j = 0;
+		}
+	}
+	if (j > 0) {
+		//sleep(60);
+		dyad_writef(stream, "PRIVMSG %s :%s\r\n", dest, buf2);
+		buf2[0] = '\0';
+		j = 0;
+	}
 }
 
 
 
-static void onConnect(dyad_Event *e) {
-    if(pass) dyad_writef(e->stream, "PASS %s\r\n", pass);
-    dyad_writef(e->stream, "NICK %s\r\n", nick);
-    dyad_writef(e->stream, "USER %s %s %s :%s\r\n", nick, nick, nick, nick);
+static void
+onConnect(dyad_Event * e)
+{
+	if (pass)
+		dyad_writef(e->stream, "PASS %s\r\n", pass);
+	dyad_writef(e->stream, "NICK %s\r\n", nick);
+	dyad_writef(e->stream, "USER %s %s %s :%s\r\n", nick, nick, nick, nick);
 }
 
 
 
-static void onError(dyad_Event *e) {
-    printf("error: %s\n", e->msg);
+static void
+onError(dyad_Event * e)
+{
+	printf("error: %s\n", e->msg);
 }
 
 
 
-static void onLine(dyad_Event *e) {
+static void
+onLine(dyad_Event * e)
+{
 
-    char nick[32], user[32], serv[256], chan[32], body[512];
+	char 		nick     [32], user[32], serv[256], chan[32], body[512];
 
-    printf("%s\n", e->data);
+	printf("%s\n", e->data);
 
-    /* Handle PING */
-    if (!memcmp(e->data, "PING", 4)) {
-        dyad_writef(e->stream, "PONG%s\r\n", e->data + 4);
-    }
+	/* Handle PING */
+	if (!memcmp(e->data, "PING", 4)) {
+		dyad_writef(e->stream, "PONG%s\r\n", e->data + 4);
+	}
+	/* Handle RPL_WELCOME */
+	if (!isRegistered && strstr(e->data, "001")) {
+		/* Join channel */
+		dyad_writef(e->stream, "JOIN %s\r\n", channels);
+		isRegistered = 1;
 
-    /* Handle RPL_WELCOME */
-    if (!isRegistered && strstr(e->data, "001")) {
-        /* Join channel */
-        dyad_writef(e->stream, "JOIN %s\r\n", channels);
-        isRegistered = 1;
+		Bibly_GetInfo(BIBLE_INFO, &binfos, &nbinfos);
+	}
+	if (sscanf(e->data, ":%31[^!]!~%31[^@]@%256s PRIVMSG %31s :%512[^\n]", nick, user, serv, chan, body) == 5) {
+		char 		msg [STRING_MAX];
+		size_t 	id;
+		FILE    *fh;
+		char    *line = NULL;
+		size_t 	llen = 0;
+		ssize_t rlen = 0;
+		size_t 	cnt = 0;
+		size_t 	page=1;
 
-		Bibly_GetInfo(BIBLE_INFO,&binfos,&nbinfos);
-    }
+		if (sscanf(body, ".diary write %[^\n]", msg) == 1) {
+			fh = fopen(ID_FILE, "r");
+			fscanf(fh, "%zu\n", &id);
+			fclose(fh);
+			fh = fopen(DIARY_FILE, "a");
+			fprintf(fh, "%s\n", msg);
+			fclose(fh);
+			send(e->stream, chan, "%s:msg id %d", nick, id);
+			fh = fopen(ID_FILE, "w");
+			fprintf(fh, "%zu\n", ++id);
+			fclose(fh);
+		} else if (sscanf(body, ".diary read %zu", &id) == 1) {
+			fh = fopen(DIARY_FILE, "r");
+			while ((rlen = getline(&line, &llen, fh)) != -1) {
+				cnt++;
+				if (cnt == id) {
+					send(e->stream, chan, "%s:%d:%s", nick, id, line);
+					break;
+				}
+			}
+			fclose(fh);
+		} else if (sscanf(body, ".diary find %[^\n]", msg) == 1) {
+			char 		tmp      [512] = "";
+			char 		scnt     [8] = "";
+			bool 		first = true;
+			fh = fopen(DIARY_FILE, "r");
+			while ((rlen = getline(&line, &llen, fh)) != -1) {
+				cnt++;
+				char           *upr1 = strupr(trim(line));
+				char           *upr2 = strupr(trim(msg));
+				if (strstr(line, msg)) {
+					sprintf(scnt, "%zu", cnt);
+					if (strlen(nick) + strlen(tmp) + strlen(scnt) + 3 < 256) {
+						if (first)
+							first = false;
+						else
+							strcat(tmp, ", ");
+						strcat(tmp, scnt);
+					} else {
+						send(e->stream, chan, "%s: %s", nick, tmp);
+						tmp[0] = '\0';
+					}
+				}
+				free(upr2);
+				upr2 = NULL;
+				free(upr1);
+				upr1 = NULL;
+			}
+			if (*tmp) {
+				send(e->stream, chan, "%s: %s", nick, tmp);
+				tmp[0] = '\0';
+			}
+			fclose(fh);
 
-    if(sscanf(e->data,":%31[^!]!~%31[^@]@%256s PRIVMSG %31s :%512[^\n]",nick,user,serv,chan,body)==5) {
-        char msg[STRING_MAX];
-        size_t id;
-        FILE *fh;
-        char *line=NULL;
-        size_t llen=0;
-        ssize_t rlen=0;
-        size_t cnt=0;
+		} else if ((sscanf(body, ".cpdv find %[^\n]", msg) == 1) || (sscanf(body, ".cpdv %zd find %[^\n]",&page,msg) == 2)) {
 
-        if(sscanf(body,".diary write %[^\n]",msg)==1) {
-            fh=fopen(ID_FILE,"r");
-            fscanf(fh,"%zu\n",&id);
-            fclose(fh);
-            fh=fopen(DIARY_FILE,"a");
-            fprintf(fh,"%s\n",msg);
-            fclose(fh);
-            send(e->stream,chan, "%s:msg id %d",nick,id);
-            fh=fopen(ID_FILE,"w");
-            fprintf(fh,"%zu\n",++id);
-            fclose(fh);
-        } else if(sscanf(body,".diary read %zu",&id)==1) {
-            fh=fopen(DIARY_FILE,"r");
-            while((rlen=getline(&line,&llen,fh))!=-1) {
-                cnt++;
-                if(cnt==id) {
-                    send(e->stream,chan,"%s:%d:%s",nick, id, line);
-                    break;
-                }
-            }
-            fclose(fh);
-        } else if(sscanf(body,".diary find %[^\n]",msg)==1) {
-            char tmp[512]="";
-            char scnt[8]="";
-            bool first=true;
-            fh=fopen(DIARY_FILE,"r");
-            while((rlen=getline(&line,&llen,fh))!=-1) {
-                cnt++;
-                char *upr1=strupr(trim(line));
-                char *upr2=strupr(trim(msg));
-                if(strstr(line,msg)) {
-                    sprintf(scnt,"%zu",cnt);
-                    if(strlen(nick)+strlen(tmp)+strlen(scnt)+3<256) {
-                        if(first) first=false;
-                        else strcat(tmp,", ");
-                        strcat(tmp,scnt);
-                    } else {
-                        send(e->stream,chan,"%s: %s", nick, tmp);
-                        tmp[0]='\0';
-                    }
-                }
-                free(upr2);
-                upr2=NULL;
-                free(upr1);
-                upr1=NULL;
-            }
-            if(*tmp) {
-                send(e->stream,chan,"%s: %s",nick, tmp);
-                tmp[0]='\0';
-            }
+			char          **lines = NULL;
+			size_t 		nlines = 0;
 
-            fclose(fh);
+			char          **vtokens = NULL;
+			size_t 		nvtokens = 0;
 
-        } else if(sscanf(body,".kjv find %[^\n]",msg)==1) {
+			char           *xbook = NULL;
+			char           *xnum = NULL;
+			char           *xvers = NULL;
+			size_t 	xcnum = 0;
+			size_t 	xvnum = 0;
 
-            char **lines=NULL;
-            size_t nlines=0;
+			size_t 		i;
 
-            char **vtokens=NULL;
-            size_t nvtokens=0;
+			size_t startLine=0;
+			size_t endLine=0;
 
-            char *xbook=NULL;
-            char *xnum=NULL;
-            char *xvers=NULL;
-            unsigned int xcnum=0;
-            unsigned int xvnum=0;
+			
 
-            size_t i;
+			Bibly_Search(BIBLE_PATH, &lines, &nlines, msg);
+
+			if(page>=1) {
+
+				send(e->stream, chan, "found %zd occurences. page %zd of %zd", nlines,page,nlines/4+(nlines%4>1?1:0));
+				
+				startLine=(page-1)*4;
+				endLine=(page-1)*4+4;
+				if(endLine>=nlines) endLine=nlines-1;
+				
+				for (i = startLine; i < endLine; i++) {
+
+					tokenize(&vtokens, &nvtokens, lines[i], "|", 2);
+
+					xbook = strdup(vtokens[0]);
+					xnum = strdup(vtokens[1]);
+					xvers = strdup(vtokens[2]);
+
+					freetok(&vtokens, &nvtokens);
+
+					tokenize(&vtokens, &nvtokens, xnum, ":", 1);
+
+					xcnum = atoi(vtokens[0]);
+					xvnum = atoi(vtokens[1]);
+
+					send(e->stream, chan, "(%zu) %s %zd:%zd -> %s",i+1,xbook,xcnum,xvnum,xvers);
+					
+
+					freetok(&vtokens, &nvtokens);
 
 
-            Bibly_Search(BIBLE_PATH,&lines,&nlines,msg);
+					xvnum = 0;
+					xcnum = 0;
+					free(xvers);
+					xvers = NULL;
+					free(xnum);
+					xnum = NULL;
+					free(xbook);
+					xbook = NULL;
 
-            send(e->stream,chan,"found %d occurences",(int)nlines);
+				}
 
-            for(i=0; i<(nlines>4?4:nlines); i++) {
 
-                tokenize(&vtokens,&nvtokens,lines[i],"|",2);
 
-                xbook=strdup(vtokens[0]);
-                xnum=strdup(vtokens[1]);
-                xvers=strdup(vtokens[2]);
+				for (i = 0; i < nlines; i++) {
+					free(lines[i]);
+					lines[i] = NULL;
+				}
+				nlines = 0;
 
-                freetok(&vtokens,&nvtokens);
+			}
 
-                tokenize(&vtokens,&nvtokens,xnum,":",1);
+		} else if (sscanf(body, ".cpdv %[^\n]", msg) == 1) {
 
-                xcnum=atoi(vtokens[0]);
-                xvnum=atoi(vtokens[1]);
+			Token         **ltokens = NULL;
+			size_t 		nltokens = 0;
 
-                freetok(&vtokens,&nvtokens);
+			char          **verses = NULL;
+			size_t 		nverses = 0;
 
-                send(e->stream,chan,"%s %d:%d -> %s",xbook,(int)xcnum,(int)xvnum,xvers);
+			char 		book     [STRING_MAX] = "";
+			unsigned int 	cnum = 0;
+			unsigned int 	svnum = 0;
+			unsigned int 	evnum = 0;
 
-                xvnum=0;
-                xcnum=0;
-                free(xvers);
-                xvers=NULL;
-                free(xnum);
-                xnum=NULL;
-                free(xbook);
-                xbook=NULL;
+			char          **vtokens = NULL;
+			size_t 		nvtokens = 0;
 
-            }
+			char           *xbook = NULL;
+			char           *xnum = NULL;
+			char           *xvers = NULL;
+			unsigned int 	xcnum = 0;
+			unsigned int 	xvnum = 0;
 
-            for(i=0; i<nlines; i++) {
-                free(lines[i]);
-                lines[i]=NULL;
-            }
-            nlines=0;
+			size_t 		i     , j, k;
 
-        } else if(sscanf(body,".kjv %[^\n]",msg)==1) {
+			lex(&ltokens, &nltokens, msg);
 
-            Token **ltokens=NULL;
-            size_t nltokens=0;
+			if (
+			    nltokens == 5 &&
+			    ltokens[0]->type == TOKEN_TYPE_STRING &&
+			    ltokens[1]->type == TOKEN_TYPE_INTEGER &&
+			    ltokens[2]->type == TOKEN_TYPE_COLON &&
+			    ltokens[3]->type == TOKEN_TYPE_INTEGER
+				) {
 
-            char **verses=NULL;
-            size_t nverses=0;
+				strcpy(book, ltokens[0]->text);
+				cnum = atoi(ltokens[1]->text);
+				svnum = atoi(ltokens[3]->text);
+				evnum = svnum;
 
-            char book[STRING_MAX]="";
-            unsigned int cnum=0;
-            unsigned int svnum=0;
-            unsigned int evnum=0;
+			} else if (
+				   nltokens == 6 &&
+				   ltokens[0]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[1]->type == TOKEN_TYPE_STRING &&
+				   ltokens[2]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[3]->type == TOKEN_TYPE_COLON &&
+				   ltokens[4]->type == TOKEN_TYPE_INTEGER
+				) {
 
-            char **vtokens=NULL;
-            size_t nvtokens=0;
+				sprintf(book, "%s %s", ltokens[0]->text, ltokens[1]->text);
+				cnum = atoi(ltokens[2]->text);
+				svnum = atoi(ltokens[4]->text);
+				evnum = svnum;
 
-            char *xbook=NULL;
-            char *xnum=NULL;
-            char *xvers=NULL;
-            unsigned int xcnum=0;
-            unsigned int xvnum=0;
+			} else if (
+				   nltokens == 7 &&
+				   ltokens[0]->type == TOKEN_TYPE_STRING &&
+				   ltokens[1]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[2]->type == TOKEN_TYPE_COLON &&
+				   ltokens[3]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[4]->type == TOKEN_TYPE_DASH &&
+				   ltokens[5]->type == TOKEN_TYPE_INTEGER
+				) {
 
-            size_t i,j,k;
+				strcpy(book, ltokens[0]->text);
+				cnum = atoi(ltokens[1]->text);
+				svnum = atoi(ltokens[3]->text);
+				evnum = atoi(ltokens[5]->text);
 
-            lex(&ltokens,&nltokens,msg);
+			} else if (
+				   nltokens == 8 &&
+				   ltokens[0]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[1]->type == TOKEN_TYPE_STRING &&
+				   ltokens[2]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[3]->type == TOKEN_TYPE_COLON &&
+				   ltokens[4]->type == TOKEN_TYPE_INTEGER &&
+				   ltokens[5]->type == TOKEN_TYPE_DASH &&
+				   ltokens[6]->type == TOKEN_TYPE_INTEGER
+				) {
 
-            if(
-                nltokens==5 &&
-                ltokens[0]->type==TOKEN_TYPE_STRING &&
-                ltokens[1]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[2]->type==TOKEN_TYPE_COLON &&
-                ltokens[3]->type==TOKEN_TYPE_INTEGER
-            ) {
-
-                strcpy(book,ltokens[0]->text);
-                cnum=atoi(ltokens[1]->text);
-                svnum=atoi(ltokens[3]->text);
-                evnum=svnum;
-
-            } else if(
-                nltokens==6 &&
-                ltokens[0]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[1]->type==TOKEN_TYPE_STRING &&
-                ltokens[2]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[3]->type==TOKEN_TYPE_COLON &&
-                ltokens[4]->type==TOKEN_TYPE_INTEGER
-            ) {
-
-                sprintf(book,"%s %s",ltokens[0]->text,ltokens[1]->text);
-                cnum=atoi(ltokens[2]->text);
-                svnum=atoi(ltokens[4]->text);
-                evnum=svnum;
-
-            } else if(
-                nltokens==7 &&
-                ltokens[0]->type==TOKEN_TYPE_STRING &&
-                ltokens[1]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[2]->type==TOKEN_TYPE_COLON &&
-                ltokens[3]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[4]->type==TOKEN_TYPE_DASH &&
-                ltokens[5]->type==TOKEN_TYPE_INTEGER
-            ) {
-
-                strcpy(book,ltokens[0]->text);
-                cnum=atoi(ltokens[1]->text);
-                svnum=atoi(ltokens[3]->text);
-                evnum=atoi(ltokens[5]->text);
-
-            } else if(
-                nltokens==8 &&
-                ltokens[0]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[1]->type==TOKEN_TYPE_STRING &&
-                ltokens[2]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[3]->type==TOKEN_TYPE_COLON &&
-                ltokens[4]->type==TOKEN_TYPE_INTEGER &&
-                ltokens[5]->type==TOKEN_TYPE_DASH &&
-                ltokens[6]->type==TOKEN_TYPE_INTEGER
-            ) {
-
-                sprintf(book,"%s %s",ltokens[0]->text,ltokens[1]->text);
-                cnum=atoi(ltokens[2]->text);
-                svnum=atoi(ltokens[4]->text);
-                evnum=atoi(ltokens[6]->text);
-            }
-
-			k=0;
-			for(i=0;i<nbinfos && k==0;i++) {
-				for(j=0;j<binfos[i]->nsnames && k==0;j++) {
-					if(strcasecmp(book,binfos[i]->snames[j])==0) {
-						strcpy(book,binfos[i]->bname);
-						k=1;
+				sprintf(book, "%s %s", ltokens[0]->text, ltokens[1]->text);
+				cnum = atoi(ltokens[2]->text);
+				svnum = atoi(ltokens[4]->text);
+				evnum = atoi(ltokens[6]->text);
+			}
+			k = 0;
+			for (i = 0; i < nbinfos && k == 0; i++) {
+				for (j = 0; j < binfos[i]->nsnames && k == 0; j++) {
+					if (strcasecmp(book, binfos[i]->snames[j]) == 0) {
+						strcpy(book, binfos[i]->bname);
+						k = 1;
 					}
 				}
 			}
 
-            Bibly_GetVerses(BIBLE_PATH,&verses,&nverses,book,cnum,svnum,evnum);
+			Bibly_GetVerses(BIBLE_PATH, &verses, &nverses, book, cnum, svnum, evnum);
 
-            for(i=0; i<(nverses>4?4:nverses); i++) {
+			for (i = 0; i < (nverses > 4 ? 4 : nverses); i++) {
 
-                tokenize(&vtokens,&nvtokens,verses[i],"|",2);
+				tokenize(&vtokens, &nvtokens, verses[i], "|", 2);
 
-                xbook=strdup(vtokens[0]);
-                xnum=strdup(vtokens[1]);
-                xvers=strdup(vtokens[2]);
+				xbook = strdup(vtokens[0]);
+				xnum = strdup(vtokens[1]);
+				xvers = strdup(vtokens[2]);
 
-                freetok(&vtokens,&nvtokens);
+				freetok(&vtokens, &nvtokens);
 
-                tokenize(&vtokens,&nvtokens,xnum,":",1);
+				tokenize(&vtokens, &nvtokens, xnum, ":", 1);
 
-                xcnum=atoi(vtokens[0]);
-                xvnum=atoi(vtokens[1]);
+				xcnum = atoi(vtokens[0]);
+				xvnum = atoi(vtokens[1]);
 
-                freetok(&vtokens,&nvtokens);
+				freetok(&vtokens, &nvtokens);
 
-                send(e->stream,chan,"%s %d:%d -> %s",xbook,(int)xcnum,(int)xvnum,xvers);
+				send(e->stream, chan, "%s %d:%d -> %s", xbook, (int) xcnum, (int) xvnum, xvers);
 
-                xvnum=0;
-                xcnum=0;
-                free(xvers);
-                xvers=NULL;
-                free(xnum);
-                xnum=NULL;
-                free(xbook);
-                xbook=NULL;
+				xvnum = 0;
+				xcnum = 0;
+				free(xvers);
+				xvers = NULL;
+				free(xnum);
+				xnum = NULL;
+				free(xbook);
+				xbook = NULL;
 
-            }
+			}
 
-            for(i=0; i<nverses; i++) {
-                free(verses[i]);
-                verses[i]=NULL;
-            }
-            free(verses);
-            verses=NULL;
-            nverses=0;
+			for (i = 0; i < nverses; i++) {
+				free(verses[i]);
+				verses[i] = NULL;
+			}
+			free(verses);
+			verses = NULL;
+			nverses = 0;
 
-            DestroyTokens(&ltokens,&nltokens);
+			DestroyTokens(&ltokens, &nltokens);
 
-        }
-    }
+		}
+	}
 }
-
-
-
-
-
-
-
-
-

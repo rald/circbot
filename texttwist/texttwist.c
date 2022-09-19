@@ -434,6 +434,18 @@ static void onLine(dyad_Event *e) {
 
 				longWordLen=strlen(word);
 
+				
+				printf("word: %s\n",word);
+				printf("bonus word: %s\n",bonusWord);
+				printf("anagrams: %zu\n",nanagrams);
+				for(size_t i=0;i<nanagrams;i++) {
+					if(i!=0) printf(", ");
+					printf("%s",anagrams[i]);
+				}
+				printf("\n");
+
+
+
 				sendf(e->stream,"PRIVMSG %s :" GAME_TITLE " %s\r\n",chn,shufword);
 
 				ticks=0;
