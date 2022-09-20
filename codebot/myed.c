@@ -11,12 +11,12 @@
 
 void freeLines(char ***lines,size_t *nlines) {
   for(size_t i=0;i<(*nlines);i++) {
-    free(lines[i]);
-    lines[i]=NULL;
+    free((*lines)[i]);
+    (*lines)[i]=NULL;
   }
-  free(lines);
-  lines=NULL;
-  nlines=0;
+  free(*lines);
+  (*lines)=NULL;
+  (*nlines)=0;
 }
 
 
@@ -111,7 +111,7 @@ int main(int argc,char **argv) {
   size_t endLine=0;
 
 
-s
+
   if(argc==2) {
     load(argv[1],&lines,&nlines);
   }
@@ -155,10 +155,11 @@ s
     } else if(!strcmp(line,"a")) {
       addLine(&lines,&nlines,"");      
       printf("%4zu %s\n",nlines,lines[nlines-1]);
-    } else if(sscanf(line,"c %zu %[^\n]",&num,str)==2) {
-      if(num>=1 && num<=nlines) {
-        free(lines[num-1]);
-        lines[num-1]=strdup(str);
+    } else if(sscanf(line,"c %zu %[^\n]",&startLine,str)==2) {
+      if(startLine>=1 && startLine<=nlines) {
+        startLine--;
+        free(lines[startLine]);
+        lines[startLine]=strdup(str);
         printf("OK\n");
       }
     } else if(sscanf(line,"l %zu %zu",&startLine,&endLine)==2) {
@@ -180,20 +181,25 @@ s
 
         numLines=endLine-startLine+1;
         
-        freeLines(&clines,&cnlines);
+        if(clines) freeLines(&clines,&cnlines);
         
         for(i=0;i<numLines;i++) {
-          addLine(&clines,&cnlines,lines[i]);
+          addLine(&clines,&cnlines,lines[i+startLine]);
           free(lines[i+startLine]);
+          lines[i+startLine]=NULL;
         }
 
         i=startLine;
         j=startLine+numLines;
         while(j<nlines) {
-          lines[i++]=lines[j++];
+          lines[i]=strdup(lines[j]);
+          free(lines[j]);
+          lines[j]=NULL;
+          i++;
+          j++;
         }
         
-        char **tmp=realloc(lines,sizeof(*lines)*numLines);
+        char **tmp=realloc(lines,sizeof(*lines)*(nlines-numLines));
         if(tmp) {
           lines=tmp;
           nlines-=numLines;
@@ -202,9 +208,50 @@ s
       }               
     } else if(sscanf(line,"y %zu %zu",&startLine,&endLine)==2) {
 
-    } else if(sscanf(line,"p %zu",&startLine,&endLine)==1) {
-      
-      
+      if(startLine>=1 && startLine<=nlines && endLine>=1 && endLine<=nlines && startLine<=endLine) {
+
+        size_t numLines;
+
+        startLine--;
+        endLine--;        
+
+        numLines=endLine-startLine+1;
+          
+        if(clines) freeLines(&clines,&cnlines);
+        
+        for(size_t i=0;i<numLines;i++) {
+          addLine(&clines,&cnlines,lines[i+startLine]);
+        }
+
+        printf("OK\n");
+      }
+
+    } else if(sscanf(line,"p %zu",&startLine)==1) {
+      if(clines && startLine<=nlines) {
+        size_t i,j;
+        startLine--;
+        char **tmp=realloc(lines,sizeof(*lines)*(nlines+cnlines));
+        if(tmp) {
+          lines=tmp;
+          nlines+=cnlines;
+
+          i=nlines-cnlines-1;
+          j=nlines-1;
+          while(i>=startLine) {
+            lines[j]=strdup(lines[i]);
+            free(lines[i]);
+            lines[i]=NULL;
+            i--;
+            j--;
+          }
+
+          for(size_t i=0;i<cnlines;i++) {
+            lines[i+startLine]=strdup(clines[i]);
+          }
+
+          printf("OK\n");
+        }
+      }        
     }
     
   }
