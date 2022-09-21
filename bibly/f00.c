@@ -4,7 +4,7 @@
 
 int main(void) {
 
-	ezxml_t bible = ezxml_parse_file("adb.xml"), book,chap,vers;
+	ezxml_t bible = ezxml_parse_file("drv.xml"), book,chap,vers;
 
 	for(book = ezxml_child(bible,"BIBLEBOOK"); book; book = book->next) {
     for(chap = ezxml_child(book,"CHAPTER"); chap; chap = chap->next) {

