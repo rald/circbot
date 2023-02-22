@@ -18,7 +18,7 @@
 #define PFX "."
 #define SCORE_FILE "score.txt"
 
-static char *srv = "sakura.jp.as.dal.net";
+static char *srv = "irc.undernet.org";
 static int prt = 6667;
 static char *chn = "#pantasya";
 static char *nck = "sieste";
