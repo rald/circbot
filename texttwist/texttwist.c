@@ -21,7 +21,7 @@
 static char *srv = "irc.undernet.org";
 static int prt = 6667;
 static char *chn = "#pantasya";
-static char *nck = "sieste";
+static char *nck = "frie";
 static char *pss = NULL;
 
 static size_t allotedtime=180;

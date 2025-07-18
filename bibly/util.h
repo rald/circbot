@@ -10,8 +10,8 @@
 char *trim(char *str);
 char *strupr(const char *str);
 char *strsub(const char *str,size_t start,size_t length);
-void tokenize(char ***tokens,size_t *ntokens,const char *str,const char *del,size_t n);
-void freetok(char ***tokens,size_t *ntkens);
+void tokenize(char ***tk,size_t *nt,char *s,char *d);
+void freetokens(char ***tk,size_t *nt);
 
 #ifdef UTIL_IMPLEMENTATION
 
@@ -34,47 +34,27 @@ char *strupr(const char *str) {
   return result;
 }
 
-
-
-char *strsub(const char *str,size_t start,size_t length) {
-  char *newstr=malloc(sizeof(*newstr)*(length+1));
-  memcpy(newstr,str+start,length);
-  newstr[length]='\0';
-  return newstr;
+void tokenize(char ***tk,size_t *nt,char *s,char *d) {
+	char *lc=strdup(s);
+	char *tok=strtok(lc,d);
+	while(tok) {
+		(*tk)=realloc(*tk,sizeof(*tk)*(*nt+1));
+		(*tk)[(*nt)++]=strdup(tok);
+		tok=strtok(NULL,d);
+	}
+	free(lc);
+	lc=NULL;
 }
 
-
-
-void tokenize(char ***tokens,size_t *ntokens,const char *str,const char *del,size_t n) {
-  char *pos=NULL;
-  size_t start=0,length=0;
-  size_t cnt=0;
-
-  while((n==0 || cnt<n) && (pos=strstr(str,del))) {
-    length=pos-str;
-    if(length) {
-      (*tokens)=realloc(*tokens,sizeof(*tokens)*(*ntokens+1));
-      (*tokens)[(*ntokens)++]=strsub(str,start,length);
-    }
-    str+=length+strlen(del);
-    cnt++;
-  }
-
-  if(*str!='\0') {
-    (*tokens)=realloc(*tokens,sizeof(*tokens)*(*ntokens+1));
-    (*tokens)[(*ntokens)++] = strdup(str);
-  }
-}
-
-void freetok(char ***tokens,size_t *ntokens) {
-  size_t i;
-  for(i=0;i<(*ntokens);i++) {
-    free((*tokens)[i]);
-    (*tokens)[i]=NULL;
-  }
-  free(*tokens);
-  (*tokens)=NULL;
-  (*ntokens)=0;
+void freetokens(char ***tk,size_t *nt) {
+	size_t i;
+	for(i=0;i<*nt;i++) {
+		free((*tk)[i]);
+		(*tk)[i]=NULL;
+	}
+	free(*tk);
+	(*tk)=NULL;
+	(*nt)=0;
 }
 
 #endif /* UTIL_IMPLEMENTATION */

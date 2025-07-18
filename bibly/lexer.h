@@ -107,3 +107,4 @@ void lex(Token ***tokens,size_t *ntokens,char *str) {
 #endif /* LEXER_IMPLEMENTATION */
 
 #endif /* LEXER_H */
+

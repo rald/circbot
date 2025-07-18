@@ -54,8 +54,6 @@ int Bibly_Search(const char *path,char*** lines,size_t *nlines,const char *line)
   size_t slinelen=0;
   ssize_t sreadlen=0;
 
-  size_t i;
-
   char *upr1=NULL;
   char *upr2=NULL;
 
@@ -71,9 +69,11 @@ int Bibly_Search(const char *path,char*** lines,size_t *nlines,const char *line)
     char **tokens=NULL;
     size_t ntokens=0;
 
-    tokenize(&tokens,&ntokens,sline,"|",2);
+		char *slinecopy=strdup(sline);
 
-    upr2=strupr(tokens[2]);
+    tokenize(&tokens,&ntokens,slinecopy,"|");
+
+    upr2=strupr(tokens[3]);
 
     if(strstr(upr2,upr1)!=NULL) {
       (*lines)=realloc(*lines,sizeof(*lines)*((*nlines)+1));
@@ -82,11 +82,10 @@ int Bibly_Search(const char *path,char*** lines,size_t *nlines,const char *line)
 
     free(upr2);
 
-    for(i=0;i<ntokens;i++) {
-      free(tokens[i]);
-      tokens[i]=NULL;
-    }
-    ntokens=0;
+		freetokens(&tokens,&ntokens);
+
+    free(slinecopy);
+    slinecopy=NULL;
 
     free(sline);
     sline=NULL;
@@ -115,10 +114,10 @@ int Bibly_GetVerses(char *path,char ***verses,size_t *nverses,char *book,unsigne
 	size_t ntokens=0;
 
 	char *xbook=NULL;
-	char *xnum=NULL;
 	unsigned int xcnum=0;
 	unsigned int xvnum=0;
 	char *xvers=NULL;
+
 
 	if((fh=fopen(path,"rt"))==NULL) {
 		printf("Error: opening file %s.\n",path);
@@ -127,20 +126,12 @@ int Bibly_GetVerses(char *path,char ***verses,size_t *nverses,char *book,unsigne
 
 	while((rlen=getline(&line,&llen,fh))!=-1) {
 
-		tokenize(&tokens,&ntokens,line,"|",2);
+		tokenize(&tokens,&ntokens,line,"|");
 
 		xbook=strdup(tokens[0]);
-		xnum=strdup(tokens[1]);
-		xvers=strdup(tokens[2]);
-
-		freetok(&tokens,&ntokens);
-
-		tokenize(&tokens,&ntokens,xnum,":",1);
-
-		xcnum=atoi(tokens[0]);
-		xvnum=atoi(tokens[1]);
-
-		freetok(&tokens,&ntokens);
+		xcnum=atoi(tokens[1]);
+		xvnum=atoi(tokens[2]);
+		xvers=strdup(tokens[3]);
 
 		if(
 				!strcasecmp(book,xbook) &&
@@ -148,16 +139,15 @@ int Bibly_GetVerses(char *path,char ***verses,size_t *nverses,char *book,unsigne
 				(svnum<=xvnum && evnum>=xvnum)
 		) {
 			(*verses)=realloc((*verses),sizeof(*verses)*((*nverses)+1));
-			if((*verses)==NULL) return 2;
 			(*verses)[(*nverses)++]=strdup(line);
 		}
+
+		freetokens(&tokens,&ntokens);
 
 		xvnum=0;
 		xcnum=0;
 		free(xvers);
 		xvers=NULL;
-		free(xnum);
-		xnum=NULL;
 		free(xbook);
 		xbook=NULL;
 
@@ -203,9 +193,9 @@ int Bibly_GetInfo(const char *path,BiblyInfo ***binfos,size_t *nbinfos) {
 		(*binfos)=realloc(*binfos,sizeof(**binfos)*((*nbinfos)+1));
 		(*binfos)[(*nbinfos)]=malloc(sizeof(*((*binfos)[(*nbinfos)])));
 
-		tokenize(&tokens1,&ntokens1,line,"|",4);
-		tokenize(&tokens2,&ntokens2,tokens1[1],"/",0);
-		tokenize(&tokens3,&ntokens3,tokens1[4],",",0);
+		tokenize(&tokens1,&ntokens1,line,"|");
+		tokenize(&tokens2,&ntokens2,tokens1[1],"/");
+		tokenize(&tokens3,&ntokens3,tokens1[4],",");
 
 		(*binfos)[(*nbinfos)]->bname=strdup(tokens1[0]);
 		(*binfos)[(*nbinfos)]->bnum=atoi(tokens1[2]);
@@ -228,9 +218,9 @@ int Bibly_GetInfo(const char *path,BiblyInfo ***binfos,size_t *nbinfos) {
 
 		(*nbinfos)++;
 
-		freetok(&tokens3,&ntokens3);
-		freetok(&tokens2,&ntokens2);
-		freetok(&tokens1,&ntokens1);
+		freetokens(&tokens3,&ntokens3);
+		freetokens(&tokens2,&ntokens2);
+		freetokens(&tokens1,&ntokens1);
 
 		free(line);
 		line=NULL;
@@ -240,6 +230,17 @@ int Bibly_GetInfo(const char *path,BiblyInfo ***binfos,size_t *nbinfos) {
 	fclose(fh);
 
 	return 0;
+}
+
+void Bibly_FreeVerses(char ***verses,size_t *nverses) {
+	size_t i;
+	for (i = 0; i < (*nverses); i++) {
+		free((*verses)[i]);
+		(*verses)[i] = NULL;
+	}
+	free(*verses);
+	(*verses) = NULL;
+	(*nverses) = 0;
 }
 
 #endif /* BIBLY_IMPLEMENTATON */

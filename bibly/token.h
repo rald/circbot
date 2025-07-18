@@ -22,15 +22,11 @@ struct Token {
 	char *text;
 };
 
-
-
 Token *CreateToken(TokenType type,char *text);
 void DestroyToken(Token **token);
 void DestroyTokens(Token ***tokens,size_t *ntokens);
 void AddToken(Token ***tokens,size_t *ntokens,Token *token);
 char *TokenToString(Token *token);
-
-
 
 #ifdef TOKEN_IMPLEMENTATION
 
@@ -52,8 +48,6 @@ Token *CreateToken(TokenType type,char *text) {
 	}
 	return token;
 }
-
-
 
 void DestroyToken(Token **token) {
 	free((*token)->text);
@@ -77,7 +71,6 @@ void AddToken(Token ***tokens,size_t *ntokens,Token *token) {
 	(*tokens)[(*ntokens)++]=token;
 }
 
-
 char *TokenToString(Token *token) {
 	char *result=malloc(sizeof(*result)*STRING_MAX);
 	if(result) {
@@ -85,7 +78,6 @@ char *TokenToString(Token *token) {
 	}
 	return result;
 }
-
 
 #endif /* TOKEN_IMPLEMENTATION */
 
