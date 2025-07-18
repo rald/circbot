@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
+double drand();
 char *trim(char *str);
 char *strupr(const char *str);
 char *strsub(const char *str,size_t start,size_t length);
@@ -14,6 +15,10 @@ void tokenize(char ***tk,size_t *nt,char *s,char *d);
 void freetokens(char ***tk,size_t *nt);
 
 #ifdef UTIL_IMPLEMENTATION
+
+double drand() {
+	return rand()/(RAND_MAX+1.0);
+}
 
 char *trim(char *a) {
     char *p = a, *q = a;

@@ -243,6 +243,34 @@ void Bibly_FreeVerses(char ***verses,size_t *nverses) {
 	(*nverses) = 0;
 }
 
+char *Bibly_GetRandomVerse(char *path) {
+	char *line=NULL;
+	size_t llen=0;
+	ssize_t rlen=0;
+
+	char *sel=NULL;
+
+	FILE *fin=fopen(path,"r");
+
+  size_t n=0;
+
+	while((rlen=getline(&line,&llen,fin))!=-1) {
+
+		if(drand()<1.0/++n) {
+			if(sel!=NULL) free(sel);
+			sel=strdup(line);
+		}
+
+		free(line);
+		line=NULL;
+		llen=0;
+		rlen=0;
+	}
+
+	return sel;
+}
+
+
 #endif /* BIBLY_IMPLEMENTATON */
 
 #endif /* BIBLY_H */

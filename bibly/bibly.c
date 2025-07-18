@@ -152,6 +152,8 @@ onLine(dyad_Event * e)
 		char msg [STRING_MAX];
 		size_t 	page=1;
 
+		trim(body);
+
 		if ((sscanf(body, ".kjv find %[^\n]", msg) == 1) || (sscanf(body, ".kjv %zd find %[^\n]",&page,msg) == 2)) {
 
 			char    **lines = NULL;
@@ -315,7 +317,7 @@ onLine(dyad_Event * e)
 
 				freetokens(&vtokens, &nvtokens);
 
-				send(e->stream, chan, "%s %d:%d -> %s", xbook, (int) xcnum, (int) xvnum, xvers);
+				send(e->stream, chan, "%s %zd:%zd -> %s", xbook, xcnum, xvnum, xvers);
 
 				xvnum = 0;
 				xcnum = 0;
@@ -328,6 +330,38 @@ onLine(dyad_Event * e)
 
 			Bibly_FreeVerses(&verses,&nverses);
 			DestroyTokens(&ltokens, &nltokens);
+
+		} else if(!strcmp(body,".pkjv")) {
+
+			char **vtokens = NULL;
+			size_t nvtokens = 0;
+
+			char *xbook = NULL;
+			char *xvers = NULL;
+			unsigned int xcnum = 0;
+			unsigned int xvnum = 0;
+
+			char *vers=Bibly_GetRandomVerse(BIBLE_PATH);
+
+			tokenize(&vtokens, &nvtokens, vers, "|");
+
+			xbook = strdup(vtokens[0]);
+			xcnum = atoi(vtokens[1]);
+			xvnum = atoi(vtokens[2]);
+			xvers = strdup(vtokens[3]);
+
+			freetokens(&vtokens, &nvtokens);
+
+			send(e->stream, chan, "%s %zd:%zd -> %s", xbook, xcnum, xvnum, xvers);
+
+			xvnum = 0;
+			xcnum = 0;
+			free(xvers);
+			xvers = NULL;
+			free(xbook);
+			xbook = NULL;
+
 		}
+
 	}
 }
