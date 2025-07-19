@@ -16,15 +16,13 @@
 
 #define TEXT_MAX 1024
 
-typedef enum LexerState LexerState;
-
-enum LexerState {
+typedef enum LexerState {
 	LEXER_STATE_DEFAULT=0,
 	LEXER_STATE_STRING,
 	LEXER_STATE_INTEGER,
 	LEXER_STATE_SYMBOL,
 	LEXER_STATE_MAX
-};
+} LexerState;
 
 void lex(Token ***tokens,size_t *ntokens,char *text);
 

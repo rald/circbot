@@ -3,10 +3,7 @@
 
 #include "common.h"
 
-typedef enum TokenType TokenType;
-typedef struct Token Token;
-
-enum TokenType {
+typedef enum TokenType {
 	TOKEN_TYPE_NONE=0,
 	TOKEN_TYPE_STRING,
 	TOKEN_TYPE_INTEGER,
@@ -15,12 +12,12 @@ enum TokenType {
 	TOKEN_TYPE_EOF,
 	TOKEN_TYPE_UNKNOWN,
 	TOKEN_TYPE_MAX
-};
+} TokenType;
 
-struct Token {
+typedef struct Token {
 	TokenType type;
 	char *text;
-};
+} Token;
 
 Token *CreateToken(TokenType type,char *text);
 void DestroyToken(Token **token);

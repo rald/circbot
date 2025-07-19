@@ -91,14 +91,12 @@ send(dyad_Stream * stream, char *dest, char *fmt,...)
 		buf2[j++] = buf1[i++];
 		buf2[j] = '\0';
 		if (j >= 255) {
-			//sleep(60);
 			dyad_writef(stream, "PRIVMSG %s :%s\r\n", dest, buf2);
 			buf2[0] = '\0';
 			j = 0;
 		}
 	}
 	if (j > 0) {
-		//sleep(60);
 		dyad_writef(stream, "PRIVMSG %s :%s\r\n", dest, buf2);
 		buf2[0] = '\0';
 		j = 0;

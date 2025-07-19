@@ -30,7 +30,7 @@ struct BiblyInfo {
 };
 
 
-void Bibly_PrintVersion();
+void Bibly_PrintVersion(void);
 int Bibly_Search(const char *path,char*** lines,size_t *nlines,const char *line);
 int Bibly_GetVerses(char *path,char ***verses,size_t *nverses,char *book,unsigned int cnum,unsigned int svnum,unsigned int evnum);
 int Bibly_GetInfo(const char *path,BiblyInfo ***binfos,size_t *nbinfos);
@@ -41,7 +41,7 @@ int Bibly_GetInfo(const char *path,BiblyInfo ***binfos,size_t *nbinfos);
 
 
 
-void Bibly_PrintVersion() {
+void Bibly_PrintVersion(void) {
   printf(BIBLY_VERSION "\n");
 }
 
