@@ -5,8 +5,10 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
+
 
 #include "dyad.h"
 
@@ -28,10 +30,10 @@
 
 
 
-static char    *server = "irc.undernet.org";
-static char    *channels = "#pantasya";
-static char    *nick = "frio";
-static char    *pass = NULL;
+static char *server = "irc.undernet.org";
+static char *channels = "#pantasya";
+static char *nick = "frio";
+static char *pass = NULL;
 static int 	isRegistered = 0;
 
 static BiblyInfo **binfos = NULL;
@@ -48,6 +50,9 @@ int
 main(void)
 {
 	dyad_Stream    *s;
+
+	srand(time(NULL));
+	
 	dyad_init();
 
 	s = dyad_newStream();
@@ -146,7 +151,7 @@ onLine(dyad_Event * e)
 
 	}
 
-	if (sscanf(e->data, ":%31[^!]!~%31[^@]@%255s PRIVMSG %31s :%511[^\n]", nick, user, serv, chan, body) == 5) {
+	if (sscanf(e->data, ":%31[^!]!%31[^@]@%255s PRIVMSG %31s :%511[^\n]", nick, user, serv, chan, body) == 5) {
 		char msg [STRING_MAX];
 		size_t 	page=1;
 
